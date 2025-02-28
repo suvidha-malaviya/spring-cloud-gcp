@@ -48,7 +48,7 @@ public class GcpParamConfigProperties implements CredentialsSupplier, Environmen
   private String version;
 
   /** Overrides the GCP project ID specified in the Core module. */
-  private String location;
+  private String location = "global";
 
   /** Overrides the GCP project ID specified in the Core module. */
   private String projectId;
