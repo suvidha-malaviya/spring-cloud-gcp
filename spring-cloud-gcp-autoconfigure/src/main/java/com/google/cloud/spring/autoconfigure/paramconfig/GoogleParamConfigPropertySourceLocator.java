@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2019 the original author or authors.
+ * Copyright 2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package com.google.cloud.spring.autoconfigure.paramconfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.gax.core.CredentialsProvider;
 import com.google.auth.Credentials;
-import com.google.cloud.parametermanager.v1.GetParameterVersionRequest;
 import com.google.cloud.parametermanager.v1.ParameterManagerClient;
 import com.google.cloud.parametermanager.v1.ParameterVersion;
 import com.google.cloud.parametermanager.v1.ParameterVersionName;
@@ -45,13 +44,15 @@ public class GoogleParamConfigPropertySourceLocator implements PropertySourceLoc
 
   private static final String PROPERTY_SOURCE_NAME = "spring-cloud-gcp";
 
+  private final ParameterManagerClient parameterManagerClient;
+
   private String projectId;
 
   private Credentials credentials;
 
   private String name;
 
-  private String version;
+  private String profile;
 
   private String location;
 
@@ -60,8 +61,11 @@ public class GoogleParamConfigPropertySourceLocator implements PropertySourceLoc
   public GoogleParamConfigPropertySourceLocator(
       GcpProjectIdProvider projectIdProvider,
       CredentialsProvider credentialsProvider,
-      GcpParamConfigProperties gcpConfigProperties)
+      GcpParamConfigProperties gcpConfigProperties,
+      ParameterManagerClient parameterManagerClient)
       throws IOException {
+
+    this.parameterManagerClient = parameterManagerClient;
     Assert.notNull(gcpConfigProperties, "Google Config properties must not be null");
 
     if (gcpConfigProperties.isEnabled()) {
@@ -80,33 +84,28 @@ public class GoogleParamConfigPropertySourceLocator implements PropertySourceLoc
       Assert.notNull(this.projectId, "Project ID must not be null");
 
       this.name = gcpConfigProperties.getName();
-      this.version = gcpConfigProperties.getVersion();
+      this.profile = gcpConfigProperties.getProfile();
       this.location = gcpConfigProperties.getLocation();
       this.enabled = gcpConfigProperties.isEnabled();
       Assert.notNull(this.name, "Config name must not be null");
-      Assert.notNull(this.version, "Config version must not be null");
+      Assert.notNull(this.profile, "Config version must not be null");
     }
   }
 
-  String getRemoteEnvironment() throws HttpClientErrorException {
+  ParameterVersion getRemoteEnvironment() throws Exception {
     // Fetch the parameter from the parameter manager
-    try (ParameterManagerClient parameterManagerClient = ParameterManagerClient.create()) {
-      GetParameterVersionRequest request =
-          GetParameterVersionRequest.newBuilder()
-              .setName(
-                  ParameterVersionName.of(
-                          this.projectId, this.location, this.name, this.version)
-                      .toString())
-              .build();
-      ParameterVersion response = parameterManagerClient.getParameterVersion(request);
+    try {
+      ParameterVersionName parameterVersionName =
+          ParameterVersionName.of(projectId, this.location, this.name, this.profile);
+      ParameterVersion response = this.parameterManagerClient.getParameterVersion(parameterVersionName.toString());
 
       if (response == null) {
         throw new HttpClientErrorException(
           HttpStatusCode.valueOf(500), "Invalid response from Parameter Manager API");
       }
-      return response.getPayload().getData().toStringUtf8();
+      return response;
     } catch (Exception ex) {
-      return null;
+      throw new Exception("Something went wrong!", ex);
     }
   }
 
@@ -117,18 +116,15 @@ public class GoogleParamConfigPropertySourceLocator implements PropertySourceLoc
     }
     Map<String, Object> config;
     try {
-      String googleConfigEnvironment = getRemoteEnvironment();
-      config = convertStringToMap(googleConfigEnvironment);
+      ParameterVersion googleConfigEnvironment = getRemoteEnvironment();
+      config = convertStringToMap(googleConfigEnvironment.getPayload().getData().toStringUtf8());
       Assert.notNull(googleConfigEnvironment, "Configuration not in expected format.");
     } catch (Exception ex) {
       String message =
-          String.format(
-              "Error loading configuration for %s/%s_%s", this.projectId, this.name, this.version);
+          "Error loading configuration";
       throw new RuntimeException(message, ex);
     }
-    System.out.println("Username from environment: " + environment.getProperty("myapp.username"));
-    MapPropertySource test = new MapPropertySource(PROPERTY_SOURCE_NAME, config);
-    return test;
+    return new MapPropertySource(PROPERTY_SOURCE_NAME, config);
   }
 
   public String getProjectId() {
@@ -143,8 +139,7 @@ public class GoogleParamConfigPropertySourceLocator implements PropertySourceLoc
       System.out.println("Error parsing JSON: " + e.getMessage());
       try {
         var yamlToProperties = new YamlToProperties(data);
-        Map<String, Object> stringObjectMap = yamlToProperties.asProperties();
-        return stringObjectMap;
+        return yamlToProperties.asProperties();
       } catch (Exception ex) {
         throw new RuntimeException("Error parsing Properties", e);
       }

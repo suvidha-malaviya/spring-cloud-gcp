@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2019 the original author or authors.
+ * Copyright 2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,12 @@
 
 package com.google.cloud.spring.autoconfigure.paramconfig;
 
+import com.google.cloud.parametermanager.v1.ParameterManagerClient;
+import com.google.cloud.parametermanager.v1.ParameterManagerSettings;
+import com.google.cloud.spring.autoconfigure.secretmanager.GcpSecretManagerAutoConfiguration;
 import com.google.cloud.spring.core.DefaultCredentialsProvider;
 import com.google.cloud.spring.core.DefaultGcpProjectIdProvider;
+import com.google.cloud.spring.core.UserAgentHeaderProvider;
 import java.io.IOException;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -37,11 +41,31 @@ public class GcpParamConfigBootstrapConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
+  public ParameterManagerClient parameterManagerClient(GcpParamConfigProperties properties)
+      throws IOException {
+    ParameterManagerSettings.Builder settings =
+        ParameterManagerSettings.newBuilder()
+            .setCredentialsProvider(new DefaultCredentialsProvider(properties))
+            .setHeaderProvider(
+                new UserAgentHeaderProvider(GcpSecretManagerAutoConfiguration.class));
+
+    if (!properties.getLocation().equals("global")) {
+      String apiEndpoint = String.format("parametermanager.%s.rep.googleapis.com:443", properties.getLocation());
+      settings.setEndpoint(apiEndpoint);
+    }
+
+    return ParameterManagerClient.create(settings.build());
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
   public GoogleParamConfigPropertySourceLocator googleConfigPropertySourceLocator(
-      GcpParamConfigProperties configProperties) throws IOException {
+      GcpParamConfigProperties configProperties,
+      ParameterManagerClient parameterManagerClient) throws IOException {
     return new GoogleParamConfigPropertySourceLocator(
         new DefaultGcpProjectIdProvider(),
         new DefaultCredentialsProvider(configProperties),
-        configProperties);
+        configProperties,
+        parameterManagerClient);
   }
 }

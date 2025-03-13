@@ -33,12 +33,12 @@ import org.springframework.test.web.servlet.MockMvc;
 /** Tests for config sample. */
 // Please use "-Dit.config=true" to enable the tests.
 @ExtendWith(SpringExtension.class)
-@EnabledIfSystemProperty(named = "it.config", matches = "true")
+@EnabledIfSystemProperty(named = "it.paramconfig", matches = "true")
 @SpringBootTest(
     classes = {Application.class},
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
-class ConfigSampleApplicationIntegrationTests {
+class ParamConfigSampleApplicationIntegrationTests {
   @Autowired private MockMvc mvc;
 
   @Test
@@ -46,6 +46,6 @@ class ConfigSampleApplicationIntegrationTests {
     this.mvc
         .perform(get("/").accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
-        .andExpect(content().json("{'queueSize':200,'featureXEnabled':true}"));
+        .andExpect(content().json("{'username':'suvidha_malaviya','password':'password'}"));
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2019 the original author or authors.
+ * Copyright 2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,13 +30,22 @@ import org.springframework.core.env.Environment;
  *
  * @since 1.1
  */
-@ConfigurationProperties("spring.cloud.gcp.paramconfig")
+@ConfigurationProperties(GcpParamConfigProperties.PREFIX)
 public class GcpParamConfigProperties implements CredentialsSupplier, EnvironmentAware {
 
-  /** Enables Spring Cloud GCP Config. */
+  /** Overrides the GCP OAuth2 credentials specified in the Core module. */
+  @NestedConfigurationProperty
+  private final Credentials credentials = new Credentials(GcpScope.CLOUD_PLATFORM.getUrl());
+
+  public static final String PREFIX = "spring.cloud.gcp.paramconfig";
+  /**
+   * Enables Spring Cloud GCP Config.
+   */
   private boolean enabled;
 
-  /** Name of the application. */
+  /**
+   * Name of the application.
+   */
   @Value("${spring.application.name:application}")
   private String name;
 
@@ -45,17 +54,17 @@ public class GcpParamConfigProperties implements CredentialsSupplier, Environmen
    * the {@code spring.profiles.active} property, falling back on the {@code
    * spring.profiles.default} property.
    */
-  private String version;
+  private String profile;
 
-  /** Overrides the GCP project ID specified in the Core module. */
-  private String location = "global";
+  /**
+   * Overrides the GCP project ID specified in the Core module.
+   */
+  private String location;
 
-  /** Overrides the GCP project ID specified in the Core module. */
+  /**
+   * Overrides the GCP project ID specified in the Core module.
+   */
   private String projectId;
-
-  /** Overrides the GCP OAuth2 credentials specified in the Core module. */
-  @NestedConfigurationProperty
-  private final Credentials credentials = new Credentials(GcpScope.RUNTIME_CONFIG_SCOPE.getUrl());
 
   public void setEnabled(boolean enabled) {
     this.enabled = enabled;
@@ -73,12 +82,12 @@ public class GcpParamConfigProperties implements CredentialsSupplier, Environmen
     return this.name;
   }
 
-  public void setVersion(String version) {
-    this.version = version;
+  public void setProfile(String profile) {
+    this.profile = profile;
   }
 
-  public String getVersion() {
-    return this.version;
+  public String getProfile() {
+    return this.profile;
   }
 
   public String getLocation() {
@@ -103,17 +112,20 @@ public class GcpParamConfigProperties implements CredentialsSupplier, Environmen
 
   @Override
   public void setEnvironment(Environment environment) {
-    if (this.version == null) {
+    if (this.profile == null) {
       String[] profiles = environment.getActiveProfiles();
       if (profiles.length == 0) {
         profiles = environment.getDefaultProfiles();
       }
 
       if (profiles.length > 0) {
-        this.version = profiles[profiles.length - 1];
+        this.profile = profiles[profiles.length - 1];
       } else {
-        this.version = "default";
+        this.profile = "default";
       }
+    }
+    if (this.location == null) {
+      this.location = "global";
     }
   }
 }

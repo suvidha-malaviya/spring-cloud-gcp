@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2019 the original author or authors.
+ * Copyright 2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
 
+import com.google.api.gax.core.CredentialsProvider;
+import com.google.cloud.parametermanager.v1.ParameterManagerClient;
+import com.google.cloud.spring.core.DefaultCredentialsProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 
-/** Tests for Config bootstrap configuration. */
+/** Tests for Parameter Config bootstrap configuration. */
 class GcpParamConfigBootstrapConfigurationTest {
 
   private ApplicationContextRunner contextRunner =
@@ -42,7 +45,7 @@ class GcpParamConfigBootstrapConfigurationTest {
             context -> {
               GcpParamConfigProperties config = context.getBean(GcpParamConfigProperties.class);
               assertThat(config.getName()).isEqualTo("application");
-              assertThat(config.getVersion()).isEqualTo("default");
+              assertThat(config.getProfile()).isEqualTo("default");
               assertThat(config.isEnabled()).isTrue();
             });
   }
@@ -52,7 +55,6 @@ class GcpParamConfigBootstrapConfigurationTest {
     this.contextRunner
         .withPropertyValues(
             "spring.application.name=myapp",
-            "spring.cloud.gcp.paramconfig.version=prod",
             "spring.cloud.gcp.paramconfig.enabled=true",
             "spring.cloud.gcp.paramconfig.project-id=pariah",
             "spring.cloud.gcp.paramconfig.location=us-central1")
@@ -60,7 +62,27 @@ class GcpParamConfigBootstrapConfigurationTest {
             context -> {
               GcpParamConfigProperties config = context.getBean(GcpParamConfigProperties.class);
               assertThat(config.getName()).isEqualTo("myapp");
-              assertThat(config.getVersion()).isEqualTo("prod");
+              assertThat(config.getProfile()).isEqualTo("default");
+              assertThat(config.getLocation()).isEqualTo("us-central1");
+              assertThat(config.isEnabled()).isTrue();
+              assertThat(config.getProjectId()).isEqualTo("pariah");
+            });
+  }
+
+  @Test
+  void testParamConfigurationValuesAreCorrectlyLoadedWithCustomProfile() {
+    this.contextRunner
+        .withPropertyValues(
+            "spring.application.name=myapp",
+            "spring.profiles.active=prod",
+            "spring.cloud.gcp.paramconfig.enabled=true",
+            "spring.cloud.gcp.paramconfig.project-id=pariah",
+            "spring.cloud.gcp.paramconfig.location=us-central1")
+        .run(
+            context -> {
+              GcpParamConfigProperties config = context.getBean(GcpParamConfigProperties.class);
+              assertThat(config.getName()).isEqualTo("myapp");
+              assertThat(config.getProfile()).isEqualTo("prod");
               assertThat(config.getLocation()).isEqualTo("us-central1");
               assertThat(config.isEnabled()).isTrue();
               assertThat(config.getProjectId()).isEqualTo("pariah");
@@ -76,6 +98,11 @@ class GcpParamConfigBootstrapConfigurationTest {
   }
 
   private static class TestConfiguration {
+
+    @Bean
+    public ParameterManagerClient parameterManagerClient() {
+      return mock(ParameterManagerClient.class);
+    }
 
     @Bean
     public GoogleParamConfigPropertySourceLocator googleParamConfigPropertySourceLocator() {
