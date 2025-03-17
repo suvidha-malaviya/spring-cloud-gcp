@@ -18,7 +18,6 @@ package com.google.cloud.spring.autoconfigure.paramconfig;
 
 import com.google.cloud.parametermanager.v1.ParameterManagerClient;
 import com.google.cloud.parametermanager.v1.ParameterManagerSettings;
-import com.google.cloud.spring.autoconfigure.secretmanager.GcpSecretManagerAutoConfiguration;
 import com.google.cloud.spring.core.DefaultCredentialsProvider;
 import com.google.cloud.spring.core.DefaultGcpProjectIdProvider;
 import com.google.cloud.spring.core.UserAgentHeaderProvider;
@@ -30,7 +29,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 /**
- * Bootstrap auto configuration for Google Cloud Runtime Configurator Starter.
+ * Bootstrap auto configuration for Google Cloud ParamConfig Starter.
  *
  * @since 1.1
  */
@@ -47,7 +46,7 @@ public class GcpParamConfigBootstrapConfiguration {
         ParameterManagerSettings.newBuilder()
             .setCredentialsProvider(new DefaultCredentialsProvider(properties))
             .setHeaderProvider(
-                new UserAgentHeaderProvider(GcpSecretManagerAutoConfiguration.class));
+                new UserAgentHeaderProvider(GcpParamConfigBootstrapConfiguration.class));
 
     if (!properties.getLocation().equals("global")) {
       String apiEndpoint = String.format("parametermanager.%s.rep.googleapis.com:443", properties.getLocation());
@@ -60,12 +59,12 @@ public class GcpParamConfigBootstrapConfiguration {
   @Bean
   @ConditionalOnMissingBean
   public GoogleParamConfigPropertySourceLocator googleConfigPropertySourceLocator(
-      GcpParamConfigProperties configProperties,
+      GcpParamConfigProperties paramConfigProperties,
       ParameterManagerClient parameterManagerClient) throws IOException {
     return new GoogleParamConfigPropertySourceLocator(
         new DefaultGcpProjectIdProvider(),
-        new DefaultCredentialsProvider(configProperties),
-        configProperties,
+        new DefaultCredentialsProvider(paramConfigProperties),
+        paramConfigProperties,
         parameterManagerClient);
   }
 }

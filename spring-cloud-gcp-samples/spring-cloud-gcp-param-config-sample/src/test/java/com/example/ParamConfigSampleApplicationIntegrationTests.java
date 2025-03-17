@@ -30,7 +30,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Tests for config sample. */
+/** Tests for paramConfig sample. */
 // Please use "-Dit.config=true" to enable the tests.
 @ExtendWith(SpringExtension.class)
 @EnabledIfSystemProperty(named = "it.paramconfig", matches = "true")
@@ -46,6 +46,6 @@ class ParamConfigSampleApplicationIntegrationTests {
     this.mvc
         .perform(get("/").accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
-        .andExpect(content().json("{'username':'suvidha_malaviya','password':'password'}"));
+        .andExpect(content().json("{'username':'test-user','password':'test-password'}"));
   }
 }

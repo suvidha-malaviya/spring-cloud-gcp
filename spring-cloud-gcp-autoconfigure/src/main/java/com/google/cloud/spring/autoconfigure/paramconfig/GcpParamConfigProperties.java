@@ -39,7 +39,7 @@ public class GcpParamConfigProperties implements CredentialsSupplier, Environmen
 
   public static final String PREFIX = "spring.cloud.gcp.paramconfig";
   /**
-   * Enables Spring Cloud GCP Config.
+   * Enables Spring Cloud GCP ParamConfig.
    */
   private boolean enabled;
 
@@ -83,7 +83,12 @@ public class GcpParamConfigProperties implements CredentialsSupplier, Environmen
   }
 
   public void setProfile(String profile) {
-    this.profile = profile;
+    String[] profiles = profile.split(",");
+    if (profiles.length > 0) {
+      this.profile = profiles[profiles.length - 1];
+    } else {
+      this.profile = "default";
+    }
   }
 
   public String getProfile() {
