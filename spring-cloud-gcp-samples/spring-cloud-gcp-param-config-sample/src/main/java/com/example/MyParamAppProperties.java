@@ -16,10 +16,11 @@
 
 package com.example;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 
-/** Sample Configuration class with property values loaded using the Runtime Configurator API. */
+/** Sample Configuration class with property values loaded using the Parameter Manager. */
 @RefreshScope
 @ConfigurationProperties("myapp")
 public class MyParamAppProperties {

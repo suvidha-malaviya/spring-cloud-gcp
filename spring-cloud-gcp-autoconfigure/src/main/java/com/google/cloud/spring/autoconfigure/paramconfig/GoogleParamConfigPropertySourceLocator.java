@@ -34,6 +34,7 @@ import org.springframework.core.env.PropertySource;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.util.Assert;
 import org.springframework.web.client.HttpClientErrorException;
+import org.yaml.snakeyaml.Yaml;
 
 /**
  * Custom {@link PropertySourceLocator} for Google Cloud Parameter Manager API.
@@ -138,8 +139,8 @@ public class GoogleParamConfigPropertySourceLocator implements PropertySourceLoc
     } catch (Exception e) {
       System.out.println("Error parsing JSON: " + e.getMessage());
       try {
-        var yamlToProperties = new YamlToProperties(data);
-        return yamlToProperties.asProperties();
+        Yaml yaml = new Yaml();
+        return yaml.load(data);
       } catch (Exception ex) {
         throw new RuntimeException("Error parsing Properties", e);
       }

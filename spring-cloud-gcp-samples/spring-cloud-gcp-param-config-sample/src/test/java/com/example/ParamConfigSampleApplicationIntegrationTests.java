@@ -46,6 +46,6 @@ class ParamConfigSampleApplicationIntegrationTests {
     this.mvc
         .perform(get("/").accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
-        .andExpect(content().json("{'username':'test-user','password':'test-password'}"));
+        .andExpect(content().string("Hello test-user, your password is test-password"));
   }
 }

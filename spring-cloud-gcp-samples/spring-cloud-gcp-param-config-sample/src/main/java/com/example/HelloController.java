@@ -32,8 +32,12 @@ public class HelloController {
   }
 
   @GetMapping("/")
-  public MyParamAppProperties json() {
-
-    return this.sampleConfig;
+  public String json() {
+    String welcomeMessage = String.format(
+        "Hello %s, your password is %s",
+        this.sampleConfig.getUsername(),
+        this.sampleConfig.getPassword()
+    );
+    return welcomeMessage;
   }
 }

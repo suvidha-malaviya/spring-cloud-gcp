@@ -17,6 +17,7 @@
 package com.google.cloud.spring.autoconfigure.paramconfig;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -78,7 +79,7 @@ class GoogleParamConfigPropertySourceLocatorTest {
   }
 
   @Test
-  void locateReturnsMapPropertySource() throws Exception {
+  void locateReturnsMapPropertySourceJson() throws Exception {
     ParameterVersion version = ParameterVersion.newBuilder()
         .setPayload(
             ParameterVersionPayload.newBuilder().setData(ByteString.copyFromUtf8("{\"property-int\": 10, \"property-bool\": true}")))
@@ -103,6 +104,31 @@ class GoogleParamConfigPropertySourceLocatorTest {
     assertThat(propertySource.getProperty("property-int")).isEqualTo(10);
     assertThat((Boolean) propertySource.getProperty("property-bool")).isTrue();
     assertThat(this.googleParamConfigPropertySourceLocator.getProjectId()).isEqualTo("projectid");
+  }
+
+  @Test
+  void locateReturnsMapPropertySourceUnformatted() throws Exception {
+    ParameterVersion version = ParameterVersion.newBuilder()
+        .setPayload(
+            ParameterVersionPayload.newBuilder().setData(ByteString.copyFromUtf8("This is unformatted payload")))
+        .build();
+    when(this.parameterManagerClient.getParameterVersion(any(ParameterVersionName.class)))
+        .thenReturn(
+            ParameterVersion.newBuilder()
+                .setPayload(
+                    ParameterVersionPayload.newBuilder().setData(ByteString.copyFromUtf8("This is unformatted payload")))
+                .build());
+
+    this.googleParamConfigPropertySourceLocator =
+        spy(
+            new GoogleParamConfigPropertySourceLocator(
+                this.projectIdProvider, this.credentialsProvider, this.gcpParamConfigProperties, this.parameterManagerClient));
+    doReturn(version)
+        .when(this.googleParamConfigPropertySourceLocator)
+        .getRemoteEnvironment();
+    assertThatExceptionOfType(RuntimeException.class)
+        .isThrownBy(() -> this.googleParamConfigPropertySourceLocator.locate(new StandardEnvironment()))
+        .withMessageContaining("Error loading configuration");
   }
 
   @Test
@@ -131,6 +157,36 @@ class GoogleParamConfigPropertySourceLocatorTest {
         this.googleParamConfigPropertySourceLocator.locate(new StandardEnvironment());
     assertThat(propertySource.getName()).isEqualTo("spring-cloud-gcp");
     assertThat(((MapPropertySource) propertySource).getPropertyNames()).isEmpty();
+  }
+
+  @Test
+  void locateReturnsMapPropertySourceYaml() throws Exception {
+    ParameterVersion version = ParameterVersion.newBuilder()
+        .setPayload(
+            ParameterVersionPayload.newBuilder().setData(ByteString.copyFromUtf8("property-int: 10\nproperty-bool: true\nnested_property:\n   nested_int: 5")))
+        .build();
+    when(this.parameterManagerClient.getParameterVersion(any(ParameterVersionName.class)))
+        .thenReturn(
+            ParameterVersion.newBuilder()
+                .setPayload(
+                    ParameterVersionPayload.newBuilder().setData(ByteString.copyFromUtf8("property-int: 10\nproperty-bool: true\nnested_property:\n   nested_int: 5")))
+                .build());
+    Map<String, Object> expectedMap = Map.of("nested_int", 5);
+
+    this.googleParamConfigPropertySourceLocator =
+        spy(
+            new GoogleParamConfigPropertySourceLocator(
+                this.projectIdProvider, this.credentialsProvider, this.gcpParamConfigProperties, this.parameterManagerClient));
+    doReturn(version)
+        .when(this.googleParamConfigPropertySourceLocator)
+        .getRemoteEnvironment();
+    PropertySource<?> propertySource =
+        this.googleParamConfigPropertySourceLocator.locate(new StandardEnvironment());
+    assertThat(propertySource.getName()).isEqualTo("spring-cloud-gcp");
+    assertThat(propertySource.getProperty("property-int")).isEqualTo(10);
+    assertThat(propertySource.getProperty("nested_property")).isEqualTo(expectedMap);
+    assertThat((Boolean) propertySource.getProperty("property-bool")).isTrue();
+    assertThat(this.googleParamConfigPropertySourceLocator.getProjectId()).isEqualTo("projectid");
   }
 
   @Test
